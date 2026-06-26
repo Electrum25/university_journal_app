@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../api/admin_service.dart';
 
 class RegistrationScreen extends StatefulWidget {
-  final String roleType; // 'Student' или 'Teacher'
+  final String roleType;
 
   const RegistrationScreen({super.key, required this.roleType});
 
@@ -31,7 +31,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Future<void> _loadGroups() async {
     try {
-      // Предполагаем, что в AdminService есть метод getGroups
       final groups = await AdminService.getGroups();
       setState(() {
         _groups = groups;
@@ -80,13 +79,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             TextFormField(controller: _firstNameController, decoration: const InputDecoration(labelText: 'Имя')),
             TextFormField(controller: _patronymicController, decoration: const InputDecoration(labelText: 'Отчество')),
             
-            // Показываем выбор группы только для студентов
             if (widget.roleType == 'Student') ...[
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(labelText: 'Выберите группу', border: OutlineInputBorder()),
                 items: _groups.map((group) => DropdownMenuItem<String>(
-                  value: group['groupId'].toString(), // Убедись, что ключ совпадает с тем, что шлет сервер
+                  value: group['groupId'].toString(), 
                   child: Text(group['groupName']),
                 )).toList(),
                 onChanged: (val) => setState(() => _selectedGroupId = val),

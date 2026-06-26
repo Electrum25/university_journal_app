@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Не забудь добавить intl в pubspec.yaml
+import 'package:intl/intl.dart';
 import '../../api/admin_service.dart';
 
 class AdminScheduleEditor extends StatefulWidget {
@@ -16,7 +16,6 @@ class _AdminScheduleEditorState extends State<AdminScheduleEditor> {
   String? selectedSubjectId;
   String? selectedTeacherId;
   
-  // Новое: храним выбранную дату вместо индекса дня недели
   DateTime selectedDate = DateTime.now();
   int selectedPair = 1;
 
@@ -62,32 +61,26 @@ class _AdminScheduleEditorState extends State<AdminScheduleEditor> {
 
     setState(() => _isSaving = true);
 
-    // Подготовка данных для отправки на C# (Date в формате ISO 8601)
     final data = {
-      "subjectId": selectedSubjectId,
-      "groupId": selectedGroupId,
-      "teacherId": selectedTeacherId,
-      "date": selectedDate.toIso8601String(), // Отправляем полную дату
-      "pairNumber": selectedPair,
+      "SubjectId": selectedSubjectId,
+      "GroupId": selectedGroupId,
+      "TeacherId": selectedTeacherId,
+      "Date": selectedDate.toIso8601String(), 
+      "PairNumber": selectedPair,
     };
 
     try {
       await AdminService.createScheduleItem(data);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Расписание успешно обновлено!'), 
-            backgroundColor: Colors.green
-          ),
+          const SnackBar(content: Text('Расписание успешно обновлено!'), backgroundColor: Colors.green),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        // Вывод ошибки с бэкенда (например, "Лимит нагрузки исчерпан")
-        String errorMsg = e.toString().replaceAll('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
+          SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -95,27 +88,16 @@ class _AdminScheduleEditorState extends State<AdminScheduleEditor> {
     }
   }
 
-  // Метод для вызова календаря
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: selectedDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 30)), // Можно ставить на месяц назад
-      lastDate: DateTime.now().add(const Duration(days: 180)), // И на полгода вперед
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
       locale: const Locale('ru', 'RU'),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: Colors.orange),
-          ),
-          child: child!,
-        );
-      },
     );
     if (picked != null && picked != selectedDate) {
-      setState(() {
-        selectedDate = picked;
-      });
+      setState(() => selectedDate = picked);
     }
   }
 
@@ -132,31 +114,28 @@ class _AdminScheduleEditorState extends State<AdminScheduleEditor> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Выбор группы
             DropdownButtonFormField<String>(
               decoration: const InputDecoration(labelText: 'Группа', border: OutlineInputBorder()),
               value: selectedGroupId,
               items: groups.map((g) => DropdownMenuItem(
-                value: g['groupId'].toString(), 
-                child: Text(g['groupName'] ?? 'Группа')
+                value: g['groupId'].toString(),
+                child: Text(g['groupName'] ?? 'Группа без имени')
               )).toList(),
               onChanged: (val) => setState(() => selectedGroupId = val),
               validator: (v) => v == null ? 'Выберите группу' : null,
             ),
             const SizedBox(height: 16),
 
-            // Выбор предмета
             DropdownButtonFormField<String>(
               decoration: const InputDecoration(labelText: 'Предмет', border: OutlineInputBorder()),
               value: selectedSubjectId,
               items: subjects.map((s) => DropdownMenuItem(
-                value: s['subjectId'].toString(), 
+                value: s['subjectId'].toString(),
                 child: Text(s['subjectName'] ?? 'Предмет')
               )).toList(),
               onChanged: (val) {
                 setState(() {
                   selectedSubjectId = val;
-                  // Автоподстановка учителя из данных предмета
                   final subject = subjects.firstWhere((e) => e['subjectId'].toString() == val);
                   selectedTeacherId = subject['teacherId']?.toString();
                 });
@@ -165,12 +144,11 @@ class _AdminScheduleEditorState extends State<AdminScheduleEditor> {
             ),
             const SizedBox(height: 16),
 
-            // Выбор учителя
             DropdownButtonFormField<String>(
               decoration: const InputDecoration(labelText: 'Преподаватель', border: OutlineInputBorder()),
               value: selectedTeacherId,
               items: teachers.map((t) => DropdownMenuItem(
-                value: t['teacherId'].toString(), 
+                value: t['teacherId'].toString(),
                 child: Text("${t['lastName']} ${t['firstName']}")
               )).toList(),
               onChanged: (val) => setState(() => selectedTeacherId = val),
@@ -178,7 +156,6 @@ class _AdminScheduleEditorState extends State<AdminScheduleEditor> {
             ),
             const SizedBox(height: 16),
 
-            // ВЫБОР ДАТЫ (Вместо дня недели)
             InkWell(
               onTap: () => _selectDate(context),
               child: InputDecorator(
@@ -188,49 +165,35 @@ class _AdminScheduleEditorState extends State<AdminScheduleEditor> {
                   prefixIcon: Icon(Icons.calendar_today, color: Colors.orange),
                 ),
                 child: Text(
-                  DateFormat('dd MMMM yyyy (EEEE)', 'ru').format(selectedDate),
-                  style: const TextStyle(fontSize: 16),
+                  DateFormat('dd.MM.yyyy (EEEE)', 'ru').format(selectedDate),
                 ),
               ),
             ),
             const SizedBox(height: 16),
 
-            // Выбор номера пары
             DropdownButtonFormField<int>(
               value: selectedPair,
-              decoration: const InputDecoration(labelText: 'Номер пары', border: OutlineInputBorder()),
-              items: List.generate(6, (index) => DropdownMenuItem(
+              decoration: const InputDecoration(labelText: 'Пара', border: OutlineInputBorder()),
+              items: List.generate(5, (index) => DropdownMenuItem(
                 value: index + 1,
                 child: Text('${index + 1} пара'),
               )),
               onChanged: (val) => setState(() => selectedPair = val!),
             ),
             const SizedBox(height: 12),
-            
-            Center(
-              child: Text(
-                "Время: ${_getTimeRange(selectedPair)}", 
-                style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)
-              )
-            ),
+            Center(child: Text("Время: ${_getTimeRange(selectedPair)}", style: const TextStyle(color: Colors.grey))),
 
             const SizedBox(height: 32),
-            
             ElevatedButton(
               onPressed: _isSaving ? null : _saveSchedule,
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 55),
                 backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+                foregroundColor: Colors.white
               ),
-              child: _isSaving 
-                ? const SizedBox(
-                    height: 20, 
-                    width: 20, 
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                  ) 
-                : const Text('Сохранить в расписание', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: _isSaving
+                ? const CircularProgressIndicator(color: Colors.white)
+                : const Text('Сохранить занятие', style: TextStyle(fontSize: 16)),
             )
           ],
         ),
@@ -244,8 +207,6 @@ class _AdminScheduleEditorState extends State<AdminScheduleEditor> {
       case 2: return "10:15 - 11:50";
       case 3: return "12:10 - 13:45";
       case 4: return "14:00 - 15:35";
-      case 5: return "15:45 - 17:20";
-      case 6: return "17:30 - 19:05";
       default: return "";
     }
   }

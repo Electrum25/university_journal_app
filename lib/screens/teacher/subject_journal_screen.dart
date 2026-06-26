@@ -23,14 +23,13 @@ class _SubjectJournalScreenState extends State<SubjectJournalScreen> {
 
   void _loadData() {
     setState(() {
-      // Загружаем студентов и оценки параллельно
       _dataFuture = _fetchJournalData();
     });
   }
 
   Future<Map<String, dynamic>> _fetchJournalData() async {
     final students = await TeacherService.getEnrolledStudents(widget.subjectId);
-    final grades = await TeacherService.getGradesBySubject(widget.subjectId); // Добавь этот метод в сервис!
+    final grades = await TeacherService.getGradesBySubject(widget.subjectId); 
     return {'students': students, 'grades': grades};
   }
 
@@ -51,14 +50,12 @@ class _SubjectJournalScreenState extends State<SubjectJournalScreen> {
         ElevatedButton(
           onPressed: () async {
             if (grade != null) {
-              // ОБНОВЛЕНИЕ
               await TeacherService.updateGrade(
                 gradeId: grade['gradeId'], 
                 score: int.parse(controller.text),
                 comment: '',
               );
             } else {
-              // СОЗДАНИЕ
               await TeacherService.createGrade(
                   studentId: studentId,
                   subjectId: widget.subjectId,
@@ -104,14 +101,12 @@ class _SubjectJournalScreenState extends State<SubjectJournalScreen> {
                     DataCell(Text('${s['lastName']} ${s['firstName']}')),
                     ...List.generate(20, (labIndex) {
                       int labNum = labIndex + 1;
-                      // Ищем оценку для этого студента и этой лабы
                       var grade = grades.firstWhere(
                         (g) => g['studentId'] == s['studentId'] && g['labNumber'] == labNum,
                         orElse: () => null,
                       );
                       return DataCell(
   Center(child: Text(grade != null ? grade['score'].toString() : '-')),
-  // Передаем сам объект grade целиком, чтобы в диалоге был доступ к gradeId
   onTap: () => _openGradeInput(s['studentId'], labNum, grade), 
 );
                     }),

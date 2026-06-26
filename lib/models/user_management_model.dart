@@ -8,7 +8,7 @@ class UserManagementModel {
   String? lastName;
   String? patronymic;
 
-  String? groupId; // ← добавили
+  String? groupId; 
   String? profileId;
 
   UserManagementModel({
@@ -34,7 +34,7 @@ class UserManagementModel {
       lastName: json['lastName']?.toString(),
       patronymic: json['patronymic']?.toString(),
 
-      groupId: json['groupId']?.toString(), // ← добавили
+      groupId: json['groupId']?.toString(),
     );
   }
 

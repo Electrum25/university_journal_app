@@ -4,7 +4,6 @@ import '../models/subject_model.dart';
 import 'package:dio/dio.dart';
 
 class AdminService {
-  // Получение списка всех пользователей
   static Future<List<UserManagementModel>> getAllUsers() async {
   final dio = await ApiClient.instance;
   final response = await dio.get('/api/Users');
@@ -18,8 +17,6 @@ class AdminService {
       if (user.role == "1" || user.role == "Teacher") {
   final profile = await dio.get('/api/Users/teacher-profile/${user.userId}');
   
-  // ВОТ ЭТО САМОЕ ВАЖНОЕ:
-  // Сохраняем ID самого преподавателя (профиля), а не пользователя
   user.profileId = profile.data["teacherId"] ?? profile.data["id"]; 
   
   user.firstName = profile.data["firstName"];
@@ -30,7 +27,6 @@ class AdminService {
 if (user.role == "2" || user.role == "Student") {
   final profile = await dio.get('/api/Users/student-profile/${user.userId}');
   
-  // Аналогично для студента
   user.profileId = profile.data["studentId"] ?? profile.data["id"];
   
   user.firstName = profile.data["firstName"];
@@ -45,19 +41,16 @@ if (user.role == "2" || user.role == "Student") {
   return users;
 }
 
-  // Удаление пользователя
   static Future<void> deleteUser(String id) async {
     final dio = await ApiClient.instance;
     await dio.delete('/api/Users/$id');
   }
 
-  // Регистрация студента
   static Future<void> registerStudent(Map<String, dynamic> data) async {
     final dio = await ApiClient.instance;
     await dio.post('/api/Users/register-student', data: data);
   }
 
-  // Регистрация преподавателя
   static Future<void> registerTeacher(Map<String, dynamic> data) async {
     final dio = await ApiClient.instance;
     await dio.post('/api/Users/register-teacher', data: data);
@@ -65,16 +58,14 @@ if (user.role == "2" || user.role == "Student") {
 
   static Future<List<Map<String, dynamic>>> getGroups() async {
   final dio = await ApiClient.instance;
-  final response = await dio.get('/api/Groups'); // Укажите ваш эндпоинт
+  final response = await dio.get('/api/Groups'); 
   List<dynamic> data = response.data;
   return data.map((g) => Map<String, dynamic>.from(g)).toList();
 }
 
-// Добавьте это в AdminService
 
 static Future<void> deleteGroup(String id) async {
   final dio = await ApiClient.instance;
-  // Убедитесь, что здесь нет лишних пробелов или спецсимволов
   final path = '/api/Groups/$id'; 
   print("Финальный URL запроса: $path");
   
@@ -83,7 +74,6 @@ static Future<void> deleteGroup(String id) async {
 
 static Future<void> createGroup(Map<String, dynamic> data) async {
   final dio = await ApiClient.instance;
-  // Теперь мы отправляем полный объект, который ожидает сервер
   await dio.post('/api/Groups', data: data); 
 }
 
@@ -124,7 +114,6 @@ static Future<void> updateTeacher({
 }) async {
   final dio = await ApiClient.instance;
 
-  // Используем camelCase для ключей (как ожидает стандартный JSON-десериализатор .NET)
   final Map<String, dynamic> data = {
     "teacherId": teacherId, 
     "firstName": firstName,
@@ -153,13 +142,12 @@ static Future<void> updateStudent({
   await dio.put('/api/Users/student', data: data);
 }
 
-// Получить ВСЕ предметы (если на бэкенде есть такой метод, если нет — используем по учителю)
   static Future<List<SubjectModel>> getAllSubjects() async {
   try {
     final dio = await ApiClient.instance;
     final response = await dio.get('/api/Subjects');
     
-    print("ДАННЫЕ С СЕРВЕРА: ${response.data}"); // Посмотри это в консоли!
+    print("ДАННЫЕ С СЕРВЕРА: ${response.data}"); 
 
     if (response.data is List) {
       return (response.data as List)
@@ -176,18 +164,15 @@ static Future<void> updateStudent({
   static Future<void> createSubject(String name, int totalHours, String teacherId) async {
   final dio = await ApiClient.instance;
 
-  // Формируем JSON строго по именам полей в твоем классе CreateSubjectRequest на C#
   final Map<String, dynamic> data = {
     "SubjectName": name.trim(),
     "TeacherId": teacherId,
-    "TotalHours": totalHours, // Добавили часы
+    "TotalHours": totalHours,
   };
 
   try {
-    // Убедись, что путь совпадает с контроллером [Route("api/[controller]")]
     await dio.post('/api/Subjects', data: data);
   } on DioException catch (e) {
-    // Выводим точную ошибку от FluentValidation или исключений C#
     print("Ошибка сервера (400/500): ${e.response?.data}");
     rethrow;
   }
@@ -198,16 +183,13 @@ static Future<void> updateStudent({
     await dio.delete('/api/Subjects/$id');
   }
 
-  // В AdminService.dart
 
-// Получить студентов группы
 static Future<List<dynamic>> getStudentsByGroup(String groupId) async {
   final dio = await ApiClient.instance;
   final response = await dio.get('/api/Groups/$groupId/students');
   return response.data as List;
 }
 
-// Привязать студента к предмету
 static Future<void> enrollStudent(String studentId, String subjectId) async {
   final dio = await ApiClient.instance;
   await dio.post('/api/Subjects/enroll', data: {
@@ -216,7 +198,6 @@ static Future<void> enrollStudent(String studentId, String subjectId) async {
   });
 }
 
-// Получить все группы (для выпадающего списка)
 static Future<List<dynamic>> getAllGroups() async {
   final dio = await ApiClient.instance;
   final response = await dio.get('/api/Groups');
@@ -225,7 +206,6 @@ static Future<List<dynamic>> getAllGroups() async {
 
 static Future<List<dynamic>> getStudentsWithEnrollment(String groupId, String subjectId) async {
   final dio = await ApiClient.instance;
-  // Вызываем новый эндпоинт
   final response = await dio.get('/api/Groups/$groupId/students-with-enrollment/$subjectId');
   return response.data as List;
 }
@@ -257,13 +237,11 @@ static Future<Map<String, List<dynamic>>> getScheduleFormData() async {
     }
   }
 
-  // Сохраняем новую пару
   static Future<void> createScheduleItem(Map<String, dynamic> data) async {
     try {
       final dio = await ApiClient.instance;
       await dio.post('/api/Schedule', data: data);
     } on DioException catch (e) {
-      // Пробрасываем сообщение об ошибке с бэкенда (например, про лимит часов)
       final message = e.response?.data ?? 'Ошибка сервера';
       throw Exception(message);
     }

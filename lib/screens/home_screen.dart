@@ -9,10 +9,13 @@ import 'student/schedule_screen.dart';
 import 'admin/admin_schedule_editor.dart';
 import '../api/admin_service.dart';
 import '../api/api_client.dart';
+import '../screens/teacher/teacher_schedule_screen.dart';
+import '../services/oauth_service.dart';
+import 'admin/user_list_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final String role;
-  final String profileId; // Это наш ID (TeacherId или StudentId) из базы
+  final String profileId; 
   final String? groupId;
 
   const HomeScreen({
@@ -43,15 +46,12 @@ class HomeScreen extends StatelessWidget {
           children: [
             _buildHeader(context),
             const SizedBox(height: 30),
-            // Передаем context в метод отрисовки блоков
             _buildRoleSpecificBlock(context),
           ],
         ),
       ),
     );
   }
-
-  // --- ВСПОМОГАТЕЛЬНЫЕ ВИДЖЕТЫ ИНТЕРФЕЙСА ---
 
   Widget _buildHeader(BuildContext context) {
     return Column(
@@ -88,15 +88,13 @@ class HomeScreen extends StatelessWidget {
       case 'Admin':
         return _buildAdminPanel(context);
       case 'Teacher':
-        return _buildTeacherPanel(context); // Исправлено: добавили context
+        return _buildTeacherPanel(context); 
       case 'Student':
-        return _buildStudentPanel(context); // Исправлено: добавили context
+        return _buildStudentPanel(context); 
       default:
         return const Center(child: Text('Доступ ограничен'));
     }
   }
-
-  // --- ПАНЕЛИ РОЛЕЙ ---
 
   Widget _buildAdminPanel(BuildContext context) {
     return Column(
@@ -110,10 +108,6 @@ class HomeScreen extends StatelessWidget {
             MaterialPageRoute(builder: (context) => const UserListScreen()),
           ),
         ),
-        _menuItem(Icons.file_download, 'Экспорт в Excel', Colors.red, onTap: () {
-          print("Экспорт...");
-        }),
-        _menuItem(Icons.admin_panel_settings, 'Логи системы', Colors.red),
         _menuItem(
           Icons.library_books,
           'Управление предметами',
@@ -133,33 +127,53 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
         _menuItem(
-  Icons.edit_calendar, 
-  'Упр. расписанием', 
-  Colors.orange, 
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AdminScheduleEditor()),
-    );
-  }
-),
+          Icons.edit_calendar, 
+          'Упр. расписанием', 
+          Colors.orange, 
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const AdminScheduleEditor()),
+            );
+          }
+        ),
       ],
     );
   }
 
-  Widget _buildTeacherPanel(BuildContext context) { // Добавлен context
+  Widget _buildTeacherPanel(BuildContext context) {
     return Column(
       children: [
-        _menuItem(Icons.edit_note, 'Журнал оценок', Colors.orange),
-        _menuItem(Icons.checklist, 'Посещаемость', Colors.orange),
         _menuItem(
-          Icons.library_books,
-          'Мои предметы',
+          Icons.calendar_month,
+          'Мое расписание',
           Colors.orange,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => TeacherSubjectsScreen(teacherProfileId: profileId), // Исправлено: используем profileId
+              builder: (context) => TeacherScheduleScreen(teacherId: profileId),
+            ),
+          ),
+        ),
+        _menuItem(
+          Icons.edit_note,
+          'Журнал оценок',
+          Colors.orange,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TeacherSubjectsScreen(teacherProfileId: profileId),
+            ),
+          ),
+        ),
+        _menuItem(
+          Icons.checklist,
+          'Посещаемость',
+          Colors.orange,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TeacherScheduleScreen(teacherId: profileId),
             ),
           ),
         ),
@@ -178,39 +192,36 @@ class HomeScreen extends StatelessWidget {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
-        // Кнопка оценок (неактивна)
-       _menuItem(
-  Icons.fact_check, 
-  'Моя успеваемость', 
-  Colors.green,
-  onTap: () => Navigator.push(
-    context,
-    MaterialPageRoute(builder: (context) => StudentGradesScreen(studentId: profileId)),
-  ),
-),
-      _menuItem(
-  Icons.schedule, 
-  'Расписание', 
-  Colors.green,
-  onTap: () {
-    // ЛОГ ДЛЯ ПРОВЕРКИ:
-    debugPrint("--- НАЖАТИЕ НА РАСПИСАНИЕ ---");
-    debugPrint("Текущий роль: $role");
-    debugPrint("Значение groupId: '$groupId'");
+        _menuItem(
+          Icons.fact_check, 
+          'Моя успеваемость', 
+          Colors.green,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => StudentGradesScreen(studentId: profileId)),
+          ),
+        ),
+        _menuItem(
+          Icons.schedule, 
+          'Расписание', 
+          Colors.green,
+          onTap: () {
+            debugPrint("--- НАЖАТИЕ НА РАСПИСАНИЕ ---");
+            debugPrint("Текущий роль: $role");
+            debugPrint("Значение groupId: '$groupId'");
 
-    if (groupId != null && groupId != "null" && groupId!.isNotEmpty) {
-      debugPrint("Перехожу на экран ScheduleScreen с ID: $groupId");
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => ScheduleScreen(groupId: groupId!)),
-      );
-    } else {
-      debugPrint("ОШИБКА: Условие перехода не выполнено (groupId пуст или null)");
-      _showError(context, "ID группы не найден в данных входа");
-    }
-  },
-),
-        // Профиль (можно оставить активным, если захочешь)
+            if (groupId != null && groupId != "null" && groupId!.isNotEmpty) {
+              debugPrint("Перехожу на экран ScheduleScreen с ID: $groupId");
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ScheduleScreen(groupId: groupId!)),
+              );
+            } else {
+              debugPrint("ОШИБКА: Условие перехода не выполнено (groupId пуст или null)");
+              _showError(context, "ID группы не найден в данных входа");
+            }
+          },
+        ),
         _menuItem(
           Icons.person, 
           'Профиль студента', 
@@ -240,19 +251,21 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // --- ЛОГИКА ---
-
   Color _getRoleColor() {
     if (role == 'Admin') return Colors.red;
     if (role == 'Teacher') return Colors.orange;
     return Colors.green;
   }
 
-  void _handleLogout(BuildContext context) {
+  Future<void> _handleLogout(BuildContext context) async {
+  await OAuthService.logout();
+  if (context.mounted) {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const LoginScreen()),
     );
   }
+}
+
   void _showError(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

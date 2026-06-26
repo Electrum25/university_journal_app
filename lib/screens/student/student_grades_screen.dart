@@ -15,7 +15,6 @@ class _StudentGradesScreenState extends State<StudentGradesScreen> {
   @override
   void initState() {
     super.initState();
-    // Загружаем данные при инициализации
     _reportFuture = StudentService.getMyReport(widget.studentId);
   }
 
@@ -29,23 +28,19 @@ class _StudentGradesScreenState extends State<StudentGradesScreen> {
       body: FutureBuilder<Map<String, dynamic>>(
         future: _reportFuture,
         builder: (context, snapshot) {
-          // 1. Состояние загрузки
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // 2. Обработка ошибок
           if (snapshot.hasError) {
             return Center(child: Text('Ошибка загрузки: ${snapshot.error}'));
           }
 
-          // 3. Проверка наличия данных
           if (!snapshot.hasData || snapshot.data == null) {
             return const Center(child: Text('Данные не найдены'));
           }
 
           final data = snapshot.data!;
-          // Используем пустые списки, если пришел null с бэкенда
           final grades = (data['grades'] as List<dynamic>?) ?? [];
           final subjects = (data['subjects'] as List<dynamic>?) ?? [];
 
@@ -59,11 +54,9 @@ class _StudentGradesScreenState extends State<StudentGradesScreen> {
             itemBuilder: (context, index) {
               final subject = subjects[index];
               
-              // Безопасное получение ID и имени предмета
               final String subjectId = subject['subjectId']?.toString() ?? '';
              final String subjectName = subject['subjectName']?.toString() ?? 'Без названия';
 
-              // Фильтруем оценки только для этого предмета
               final subjectGrades = grades.where((g) => g['subjectId'] == subjectId).toList();
 
               return Card(
@@ -92,7 +85,6 @@ class _StudentGradesScreenState extends State<StudentGradesScreen> {
                           ],
                           rows: subjectGrades.map((g) {
                             return DataRow(cells: [
-                              // Добавляем проверку на null для каждого поля внутри ячейки
                               DataCell(Text('Лаб. №${g['labNumber'] ?? '?'}')),
                               DataCell(
                                 Container(

@@ -36,11 +36,9 @@ class _SubjectEnrollScreenState extends State<SubjectEnrollScreen> {
     });
   }
 
-  // Метод массового зачисления с проверкой
   void _enrollAll() async {
     int count = 0;
     for (var student in _students) {
-      // Привязываем только тех, кто еще не зачислен
       if (student['isEnrolled'] == false) {
         try {
           await AdminService.enrollStudent(student['studentId'], widget.subject.id);
@@ -50,13 +48,12 @@ class _SubjectEnrollScreenState extends State<SubjectEnrollScreen> {
         }
       }
     }
-    _loadStudents(_selectedGroupId!); // Обновляем UI
+    _loadStudents(_selectedGroupId!); 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Зачислено новых студентов: $count')),
     );
   }
 
-  // Диалог подтверждения отвязки (защита от случайного удаления оценок в будущем)
   void _showUnlinkDialog(String studentId, String name) {
     showDialog(
       context: context,

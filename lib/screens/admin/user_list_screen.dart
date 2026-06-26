@@ -20,17 +20,31 @@ class _UserListScreenState extends State<UserListScreen> {
     _usersFuture = AdminService.getAllUsers();
   }
 
-  // Метод для обновления списка (теперь он определен)
   void _refreshUsers() {
     setState(() {
       _usersFuture = AdminService.getAllUsers();
     });
   }
 
+  bool _isTeacher(String role) {
+    final r = role.toLowerCase();
+    return r == "teacher" || r == "1";
+  }
+
+  bool _isStudent(String role) {
+    final r = role.toLowerCase();
+    return r == "student" || r == "2";
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Пользователи системы')),
+      appBar: AppBar(
+        title: const Text('Пользователи системы'),
+        actions: [
+          IconButton(onPressed: _refreshUsers, icon: const Icon(Icons.refresh))
+        ],
+      ),
       body: FutureBuilder<List<UserManagementModel>>(
         future: _usersFuture,
         builder: (context, snapshot) {
@@ -38,47 +52,59 @@ class _UserListScreenState extends State<UserListScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Ошибка: ${snapshot.error}'));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text('Ошибка: ${snapshot.error}', textAlign: TextAlign.center),
+              ),
+            );
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text('Пользователей пока нет'));
           }
 
           final users = snapshot.data!;
-          return ListView.builder(
-            itemCount: users.length,
-            itemBuilder: (context, index) {
-              final user = users[index];
+          return RefreshIndicator(
+            onRefresh: () async => _refreshUsers(),
+            child: ListView.builder(
+              itemCount: users.length,
+              itemBuilder: (context, index) {
+                final user = users[index];
 
-              // Собираем ФИО
-              String fullName = [user.lastName, user.firstName, user.patronymic]
-                  .where((s) => s != null && s.isNotEmpty)
-                  .join(' ');
+                String fullName = [user.lastName, user.firstName, user.patronymic]
+                    .where((s) => s != null && s.trim().isNotEmpty)
+                    .join(' ');
 
-              return ListTile(
-                leading: CircleAvatar(
-                  child: Text(user.role.isNotEmpty ? user.role[0].toUpperCase() : '?'),
-                ),
-                title: Text(
-                  fullName.isEmpty ? (user.login ?? 'Без логина') : fullName,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text('Логин: ${user.login} • Роль: ${user.role}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.blue),
-                      onPressed: () => _editUserDialog(user), // Передаем модель
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: _isTeacher(user.role) ? Colors.orange : Colors.blue,
+                    child: Text(
+                      user.role.isNotEmpty ? user.role[0].toUpperCase() : '?',
+                      style: const TextStyle(color: Colors.white),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _confirmDelete(user), // Используем готовый метод удаления
-                    ),
-                  ],
-                ),
-              );
-            },
+                  ),
+                  title: Text(
+                    fullName.isEmpty ? (user.login ?? 'Без имени') : fullName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text('Логин: ${user.login}\nРоль: ${user.role}'),
+                  isThreeLine: true,
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        onPressed: () => _editUserDialog(user),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => _confirmDelete(user),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           );
         },
       ),
@@ -92,21 +118,23 @@ class _UserListScreenState extends State<UserListScreen> {
   void _showAddUserOptions() async {
     final String? role = await showModalBottomSheet<String>(
       context: context,
-      builder: (ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const ListTile(
-              title: Text("Выберите тип",
-                  style: TextStyle(fontWeight: FontWeight.bold))),
-          ListTile(
-              leading: const Icon(Icons.school),
-              title: const Text("Студент"),
-              onTap: () => Navigator.pop(ctx, 'Student')),
-          ListTile(
-              leading: const Icon(Icons.person),
-              title: const Text("Преподаватель"),
-              onTap: () => Navigator.pop(ctx, 'Teacher')),
-        ],
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+                title: Text("Выберите тип регистрации",
+                    style: TextStyle(fontWeight: FontWeight.bold))),
+            ListTile(
+                leading: const Icon(Icons.school),
+                title: const Text("Студент"),
+                onTap: () => Navigator.pop(ctx, 'Student')),
+            ListTile(
+                leading: const Icon(Icons.person),
+                title: const Text("Преподаватель"),
+                onTap: () => Navigator.pop(ctx, 'Teacher')),
+          ],
+        ),
       ),
     );
 
@@ -115,10 +143,7 @@ class _UserListScreenState extends State<UserListScreen> {
         context,
         MaterialPageRoute(builder: (_) => RegistrationScreen(roleType: role)),
       );
-
-      if (result == true) {
-        _refreshUsers();
-      }
+      if (result == true) _refreshUsers();
     }
   }
 
@@ -127,10 +152,9 @@ class _UserListScreenState extends State<UserListScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Удаление'),
-        content: Text('Удалить пользователя ${user.login}?'),
+        content: Text('Удалить пользователя ${user.login} и все связанные данные?'),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
@@ -140,7 +164,7 @@ class _UserListScreenState extends State<UserListScreen> {
                   Navigator.pop(ctx);
                   _refreshUsers();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Пользователь удален')),
+                    const SnackBar(content: Text('Пользователь успешно удален')),
                   );
                 }
               } catch (e) {
@@ -154,102 +178,79 @@ class _UserListScreenState extends State<UserListScreen> {
     );
   }
 
-  // Исправленный диалог редактирования под Модель и DTO
   void _editUserDialog(UserManagementModel user) {
+    final firstNameController = TextEditingController(text: user.firstName ?? "");
+    final lastNameController = TextEditingController(text: user.lastName ?? "");
+    final patronymicController = TextEditingController(text: user.patronymic ?? "");
 
-  final firstNameController =
-      TextEditingController(text: user.firstName ?? "");
-
-  final lastNameController =
-      TextEditingController(text: user.lastName ?? "");
-
-  final patronymicController =
-      TextEditingController(text: user.patronymic ?? "");
-
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Редактировать пользователя'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-
-          TextField(
-            controller: lastNameController,
-            decoration: const InputDecoration(labelText: 'Фамилия'),
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Редактирование: ${user.login}'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: lastNameController,
+                decoration: const InputDecoration(labelText: 'Фамилия'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: firstNameController,
+                decoration: const InputDecoration(labelText: 'Имя'),
+              ),
+              const SizedBox(height: 10),
+              if (_isTeacher(user.role))
+                TextField(
+                  controller: patronymicController,
+                  decoration: const InputDecoration(labelText: 'Отчество'),
+                ),
+            ],
           ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                if (_isTeacher(user.role)) {
+                  await AdminService.updateTeacher(
+                    teacherId: user.profileId ?? "",
+                    firstName: firstNameController.text.trim(),
+                    lastName: lastNameController.text.trim(),
+                    patronymic: patronymicController.text.trim(),
+                  );
+                } else if (_isStudent(user.role)) {
+                  await AdminService.updateStudent(
+                    studentId: user.profileId ?? "",
+                    firstName: firstNameController.text.trim(),
+                    lastName: lastNameController.text.trim(),
+                    groupId: user.groupId,
+                  );
+                }
 
-          const SizedBox(height: 10),
-
-          TextField(
-            controller: firstNameController,
-            decoration: const InputDecoration(labelText: 'Имя'),
+                if (mounted) {
+                  Navigator.pop(context);
+                  _refreshUsers();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Данные успешно сохранены')),
+                  );
+                }
+              } catch (e) {
+                String errorMsg = "Ошибка при сохранении";
+                if (e is DioException) {
+                  errorMsg = e.response?.data?.toString() ?? e.message ?? errorMsg;
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(errorMsg)),
+                );
+              }
+            },
+            child: const Text('Сохранить'),
           ),
-
-          const SizedBox(height: 10),
-
-          if (user.role == "1" || user.role == "Teacher")
-            TextField(
-              controller: patronymicController,
-              decoration: const InputDecoration(labelText: 'Отчество'),
-            ),
         ],
       ),
-      actions: [
-
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Отмена'),
-        ),
-
-        ElevatedButton(
-  onPressed: () async {
-    try {
-      if (user.role == "1" || user.role == "Teacher") {
-  await AdminService.updateTeacher(
-    // Передаем ID профиля, а не аккаунта!
-    teacherId: user.profileId ?? "", 
-    firstName: firstNameController.text,
-    lastName: lastNameController.text,
-    patronymic: patronymicController.text,
-  );
-} else if (user.role == "2" || user.role == "Student") {
-  await AdminService.updateStudent(
-    // Здесь тоже ID профиля студента
-    studentId: user.profileId ?? "", 
-    firstName: firstNameController.text,
-    lastName: lastNameController.text,
-    groupId: user.groupId,
-  );
-}
-
-      if (mounted) {
-        Navigator.pop(context);
-        _refreshUsers();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Данные обновлены')),
-        );
-      }
-    } catch (e) {
-      // Расширенная диагностика ошибки 400
-      if (e is DioException) {
-        final serverMessage = e.response?.data;
-        print("ОШИБКА СЕРВЕРА (400): $serverMessage");
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Ошибка: $serverMessage')),
-          );
-        }
-      } else {
-        print("Ошибка: $e");
-      }
-    }
-  },
-  child: const Text('Сохранить'),
-),
-      ],
-    ),
-  );
-}
+    );
+  }
 }

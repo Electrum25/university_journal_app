@@ -3,8 +3,8 @@ class Teacher {
   final String firstName;
   final String lastName;
   final String? patronymic;
-  final String department; // Кафедра (например, "ИСП")
-  final List<String> subjects; // Список ID предметов, которые он ведет
+  final String department; 
+  final List<String> subjects; 
 
   Teacher({
     required this.id,
@@ -24,7 +24,6 @@ class Teacher {
       lastName: json['lastName'],
       patronymic: json['patronymic'],
       department: json['department'] ?? 'Общая кафедра',
-      // Преобразуем список из JSON в List<String>
       subjects: List<String>.from(json['subjects'] ?? []),
     );
   }

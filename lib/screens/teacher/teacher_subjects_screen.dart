@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../api/teacher_service.dart';
-import '../../models/subject_model.dart'; // Убедись, что импорт есть
+import '../../models/subject_model.dart';
 import 'subject_journal_screen.dart';
 
 class TeacherSubjectsScreen extends StatelessWidget {
@@ -10,12 +10,11 @@ class TeacherSubjectsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ЛОГ 1: Проверяем какой ID пришел на экран
     debugPrint("LOG: Открыт экран предметов для TeacherId: $teacherProfileId");
 
     return Scaffold(
       appBar: AppBar(title: const Text('Мои предметы')),
-      body: FutureBuilder<List<SubjectModel>>( // Используем модель!
+      body: FutureBuilder<List<SubjectModel>>( 
         future: TeacherService.getMySubjects(teacherProfileId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -32,7 +31,6 @@ class TeacherSubjectsScreen extends StatelessWidget {
           }
 
           final subjects = snapshot.data!;
-          // ЛОГ 2: Видим сколько предметов пришло
           debugPrint("LOG: Получено предметов: ${subjects.length}");
 
           return ListView.builder(
@@ -41,7 +39,6 @@ class TeacherSubjectsScreen extends StatelessWidget {
               final subject = subjects[index];
               return ListTile(
                 leading: const Icon(Icons.book, color: Colors.orange),
-                // Теперь мы используем subject.name из модели (которая знает про subjectName)
                 title: Text(subject.name), 
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {

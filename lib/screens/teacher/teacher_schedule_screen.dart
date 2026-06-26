@@ -1,33 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../api/student_service.dart';
-import '../../models/schedule_model.dart'; 
+import '../../api/teacher_service.dart';
+import '../../models/schedule_model.dart';
+import 'attendance_screen.dart';
 
-class ScheduleScreen extends StatefulWidget {
-  final String groupId;
-  const ScheduleScreen({super.key, required this.groupId});
+class TeacherScheduleScreen extends StatefulWidget {
+  final String teacherId;
+
+  const TeacherScheduleScreen({super.key, required this.teacherId});
 
   @override
-  State<ScheduleScreen> createState() => _ScheduleScreenState();
+  State<TeacherScheduleScreen> createState() => _TeacherScheduleScreenState();
 }
 
-class _ScheduleScreenState extends State<ScheduleScreen> {
+class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
   DateTime _startOfWeek = _findFirstDayOfWeek(DateTime.now());
   late Future<List<ScheduleModel>> _scheduleFuture;
 
   @override
   void initState() {
     super.initState();
-    _debugPrintInfo();
     _loadSchedule();
-  }
-
-  void _debugPrintInfo() {
-    print('=== ДЕБАГ РАСПИСАНИЯ ===');
-    print('Current date: ${DateTime.now()}');
-    print('Start of week: ${_findFirstDayOfWeek(DateTime.now())}');
-    print('Weekday number: ${DateTime.now().weekday}');
-    print('========================');
   }
 
   static DateTime _findFirstDayOfWeek(DateTime date) {
@@ -35,27 +28,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _loadSchedule() {
-    final startUtc = DateTime.utc(
-      _startOfWeek.year,
-      _startOfWeek.month,
-      _startOfWeek.day,
-    );
-    final endUtc = DateTime.utc(
-      _startOfWeek.year,
-      _startOfWeek.month,
-      _startOfWeek.day + 6,
-      23, 59, 59,
-    );
-    
-    print('Загружаем расписание:');
-    print('   Начало: $startUtc');
-    print('   Конец: $endUtc');
-    
+    final endOfWeek = _startOfWeek.add(const Duration(days: 6));
     setState(() {
-      _scheduleFuture = StudentService.getSchedule(
-        widget.groupId, 
-        startUtc, 
-        endUtc
+      _scheduleFuture = TeacherService.getTeacherSchedule(
+        widget.teacherId,
+        _startOfWeek,
+        endOfWeek,
       );
     });
   }
@@ -78,7 +56,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Расписание занятий'),
+        title: const Text('Мое расписание'),
         centerTitle: true,
       ),
       body: Column(
@@ -92,33 +70,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('Ошибка: ${snapshot.error}'),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _loadSchedule,
-                          child: const Text('Повторить'),
-                        ),
-                      ],
-                    ),
-                  );
+                  return Center(child: Text('Ошибка: ${snapshot.error}'));
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return _buildEmptyState();
-                }
-
-                print('Получено занятий: ${snapshot.data!.length}');
-                if (snapshot.data!.isNotEmpty) {
-                  print('Пример занятия:');
-                  final firstLesson = snapshot.data!.first;
-                  print('   Предмет: ${firstLesson.subjectName}');
-                  print('   Пара: ${firstLesson.pairNumber}');
-                  print('   Дата: ${firstLesson.date}');
-                  print('   Время: ${firstLesson.timeRange}');
-                  print('   Преподаватель: ${firstLesson.teacherFullName}');
                 }
 
                 final grouped = _groupLessonsByDate(snapshot.data!);
@@ -191,7 +146,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     
     for (var lesson in lessons) {
       final dateKey = DateTime(lesson.date.year, lesson.date.month, lesson.date.day);
-      
       if (!grouped.containsKey(dateKey)) {
         grouped[dateKey] = [];
       }
@@ -216,22 +170,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 20, bottom: 8, left: 4),
-          child: Row(
-            children: [
-              Text(
-                DateFormat('EEEE, d MMMM', 'ru').format(date).toUpperCase(),
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isToday ? Colors.orange : Colors.grey.shade700,
-                  fontSize: 13,
-                  letterSpacing: 1.1,
-                ),
-              ),
-              if (isToday) ...[
-                const SizedBox(width: 8),
-                const Icon(Icons.circle, size: 8, color: Colors.orange),
-              ]
-            ],
+          child: Text(
+            DateFormat('EEEE, d MMMM', 'ru').format(date).toUpperCase(),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isToday ? Colors.orange : Colors.grey.shade700,
+              fontSize: 13,
+              letterSpacing: 1.1,
+            ),
           ),
         ),
         ...lessons.map((l) => _buildLessonCard(l)).toList(),
@@ -250,8 +196,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Container(
-          width: 40,
-          height: 40,
+          width: 50,
+          height: 50,
           decoration: BoxDecoration(
             color: Colors.orange.shade50,
             borderRadius: BorderRadius.circular(8),
@@ -259,7 +205,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           child: Center(
             child: Text(
               '${lesson.pairNumber}',
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange, fontSize: 18),
             ),
           ),
         ),
@@ -267,7 +213,33 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           lesson.subjectName,
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        subtitle: Text('${lesson.timeRange} • ${lesson.teacherFullName}'),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(lesson.timeRange),
+            const SizedBox(height: 2),
+            Text(
+              lesson.teacherFullName,
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+            ),
+          ],
+        ),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AttendanceScreen(
+                subjectId: lesson.subjectId,
+                subjectName: lesson.subjectName,
+                groupId: lesson.groupId,
+                scheduleItemId: lesson.scheduleItemId,
+                teacherId: widget.teacherId,
+                date: lesson.date,
+                pairNumber: lesson.pairNumber,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -277,16 +249,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.coffee_maker_outlined, size: 64, color: Colors.grey),
+          const Icon(Icons.calendar_today, size: 64, color: Colors.grey),
           const SizedBox(height: 16),
           const Text(
             'На этой неделе занятий не найдено',
             style: TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Неделя: ${DateFormat('dd.MM').format(_startOfWeek)}',
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
           ),
         ],
       ),

@@ -34,8 +34,8 @@ class _GroupListScreenState extends State<GroupListScreen> {
             TextField(controller: specController, decoration: const InputDecoration(labelText: 'Специализация')),
             TextField(
   controller: yearController, 
-  decoration: const InputDecoration(labelText: 'Год (курс)'), // keyboardType убран отсюда
-  keyboardType: TextInputType.number, // Перенесен сюда, на уровень самого TextField
+  decoration: const InputDecoration(labelText: 'Год (курс)'), 
+  keyboardType: TextInputType.number, 
 ),
           ],
         ),
@@ -44,22 +44,18 @@ class _GroupListScreenState extends State<GroupListScreen> {
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
         ElevatedButton(
             onPressed: () async {
-    // 1. Формируем данные (убедитесь, что имена ключей совпадают с C#!)
     final data = {
-      "groupName": nameController.text, // или "Name" — проверьте в C#
+      "groupName": nameController.text, 
       "specialization": specController.text,
       "year": int.tryParse(yearController.text) ?? 0,
     };
 
-    // 2. Делаем запрос вне setState
     await AdminService.createGroup(data);
     
-    // 3. Получаем новое Future
     final updatedFuture = AdminService.getGroups();
     
     if (mounted) {
       Navigator.pop(context);
-      // 4. Обновляем состояние синхронно
       setState(() {
         _groupsFuture = updatedFuture;
       });
@@ -80,7 +76,6 @@ class _GroupListScreenState extends State<GroupListScreen> {
         future: _groupsFuture,
         builder: (context, snapshot) {
           if (snapshot.hasData) {
-    // ВЫВЕДИТЕ ЭТО В КОНСОЛЬ!
     print("Пришедшие данные: ${snapshot.data?.first}"); 
   }
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -98,22 +93,18 @@ class _GroupListScreenState extends State<GroupListScreen> {
             itemCount: groups.length,
             itemBuilder: (_, i) {
   final group = groups[i];
-  // ВАЖНО: убедитесь, что ключ совпадает с тем, что вы видите в консоли
-  // (Вы писали, что пришло: groupId: 40003156...)
   final id = group['groupId']?.toString(); 
   final name = group['groupName']?.toString() ?? 'Без названия';
 
   return ListTile(
     title: Text(name),
     trailing: Row(
-  mainAxisSize: MainAxisSize.min, // Чтобы Row не занимал всю ширину строки
+  mainAxisSize: MainAxisSize.min,
   children: [
-    // Кнопка редактирования
     IconButton(
       icon: const Icon(Icons.edit, color: Colors.blue),
-      onPressed: () => _editDialog(group), // Передаем данные конкретной группы в диалог
+      onPressed: () => _editDialog(group), 
     ),
-    // Ваша существующая кнопка удаления
     IconButton(
       icon: const Icon(Icons.delete, color: Colors.red),
       onPressed: () async {
@@ -154,7 +145,6 @@ class _GroupListScreenState extends State<GroupListScreen> {
 
 
   void _editDialog(Map<String, dynamic> group) {
-  // Предзаполняем контроллеры текущими данными из переданной группы
   final nameController = TextEditingController(text: group['groupName']?.toString() ?? '');
   final specController = TextEditingController(text: group['specialization']?.toString() ?? '');
   final yearController = TextEditingController(text: group['year']?.toString() ?? '');
@@ -184,26 +174,21 @@ class _GroupListScreenState extends State<GroupListScreen> {
           onPressed: () async {
             if (id == null || id.isEmpty) return;
 
-            // Формируем обновленные данные. 
-            // ВАЖНО: убедитесь, что ключ ID совпадает с тем, что ждет ваш C# (обычно это "id" или "groupId")
             final data = {
-              "groupId": id, // Или "groupId": id, в зависимости от вашей C# модели UpdateGroupRequest
               "groupName": nameController.text,
               "specialization": specController.text,
               "year": int.tryParse(yearController.text) ?? 0,
             };
 
             try {
-              // Ждем выполнения PUT запроса
               await AdminService.updateGroup(data);
               
-              // Получаем свежий список
               final updatedGroups = await AdminService.getGroups();
               
               if (mounted) {
-                Navigator.pop(context); // Закрываем диалог
+                Navigator.pop(context); 
                 setState(() {
-                  _groupsFuture = Future.value(updatedGroups); // Синхронно обновляем экран
+                  _groupsFuture = Future.value(updatedGroups); 
                 });
               }
             } catch (e) {

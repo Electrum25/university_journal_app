@@ -29,7 +29,6 @@ class _SubjectManagementScreenState extends State<SubjectManagementScreen> {
     try {
       final allUsers = await AdminService.getAllUsers();
       setState(() {
-        // Фильтруем учителей по роли (строка или ID 1, если у тебя так в бэкенде)
         _teachers = allUsers.where((u) => u.role == "Teacher" || u.role == "1").toList();
       });
     } catch (e) {
@@ -39,7 +38,7 @@ class _SubjectManagementScreenState extends State<SubjectManagementScreen> {
 
   void _showAddSubjectDialog() {
     final nameController = TextEditingController();
-    final hoursController = TextEditingController(); // Контроллер для часов
+    final hoursController = TextEditingController();
     String? selectedTeacherId;
 
     showDialog(
@@ -61,7 +60,7 @@ class _SubjectManagementScreenState extends State<SubjectManagementScreen> {
                 const SizedBox(height: 10),
                 TextField(
                   controller: hoursController,
-                  keyboardType: TextInputType.number, // Только цифры
+                  keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     labelText: 'Общее количество часов',
                     hintText: 'Например: 72',
@@ -93,7 +92,6 @@ class _SubjectManagementScreenState extends State<SubjectManagementScreen> {
 
                 if (name.isNotEmpty && hours > 0 && selectedTeacherId != null) {
                   try {
-                    // ВАЖНО: Обнови метод в AdminService, чтобы он принимал int hours
                     await AdminService.createSubject(
                       name,
                       hours,
@@ -148,7 +146,6 @@ class _SubjectManagementScreenState extends State<SubjectManagementScreen> {
               return ListTile(
                 leading: const CircleAvatar(child: Icon(Icons.book)),
                 title: Text(subject.name),
-                // Показываем количество часов прямо в списке
                 subtitle: Text('Часов: ${subject.totalHours ?? 0} | Нажмите для управления студентами'),
                 onTap: () {
                   Navigator.push(

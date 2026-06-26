@@ -2,7 +2,7 @@ class UserProfile {
   final String userId;
   final String login;
   final String role;
-  final String? businessId; // Тот самый ID из твоего UseCase
+  final String? businessId; 
 
   UserProfile({
     required this.userId,

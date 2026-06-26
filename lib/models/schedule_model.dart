@@ -2,42 +2,55 @@ import 'package:intl/intl.dart';
 
 class ScheduleModel {
   final String scheduleItemId;
+  final String subjectId;
   final String subjectName;
-  final DateTime date; // Теперь используем реальную дату
+  final DateTime date;
   final int pairNumber;
   final String timeRange;
   final String teacherFullName;
+  final String groupId;
 
   ScheduleModel({
     required this.scheduleItemId,
+    required this.subjectId,
     required this.subjectName,
     required this.date,
     required this.pairNumber,
     required this.timeRange,
     required this.teacherFullName,
+    required this.groupId,
   });
 
   factory ScheduleModel.fromJson(Map<String, dynamic> json) {
-    // Парсим дату из строки (ISO 8601), которую присылает C#
+    print('Парсим JSON: $json');
+    
     DateTime parsedDate = DateTime.now();
     var rawDate = json['date'] ?? json['Date'];
     if (rawDate != null) {
       parsedDate = DateTime.parse(rawDate.toString());
+      if (parsedDate.isUtc) {
+        parsedDate = parsedDate.toLocal();
+      }
     }
 
     return ScheduleModel(
       scheduleItemId: (json['scheduleItemId'] ?? json['ScheduleItemId'] ?? '').toString(),
+      subjectId: (json['subjectId'] ?? json['SubjectId'] ?? '').toString(),
       subjectName: (json['subjectName'] ?? json['SubjectName'] ?? 'Без названия').toString(),
       date: parsedDate,
-      pairNumber: int.tryParse((json['pairNumber'] ?? json['PairNumber'] ?? '0').toString()) ?? 0,
+      pairNumber: (json['pairNumber'] ?? json['PairNumber'] ?? 0) as int,
       timeRange: (json['timeRange'] ?? json['TimeRange'] ?? '').toString(),
       teacherFullName: (json['teacherFullName'] ?? json['TeacherFullName'] ?? 'Не назначен').toString(),
+      groupId: (json['groupId'] ?? json['GroupId'] ?? '').toString(),
     );
   }
 
-  // Удобный геттер для получения названия дня недели на русском
   String get russianDayName {
-    // Использует пакет intl для локализации
     return DateFormat('EEEE', 'ru').format(date);
+  }
+  
+  @override
+  String toString() {
+    return 'ScheduleModel(subjectName: $subjectName, pairNumber: $pairNumber, date: $date)';
   }
 }

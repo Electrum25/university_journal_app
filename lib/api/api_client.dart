@@ -1,28 +1,53 @@
 import 'package:dio/dio.dart';
-import 'package:dio_cookie_manager/dio_cookie_manager.dart';
-import 'package:cookie_jar/cookie_jar.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart';
+import '../services/oauth_service.dart';
 import 'dart:io';
+import 'package:dio/io.dart';
 
 class ApiClient {
   static Dio? _dio;
+  static const String _baseUrl = 'https://localhost:7070'; 
+  static void reset() {
+    _dio = null;
+  }
 
   static Future<Dio> get instance async {
     if (_dio == null) {
       _dio = Dio(BaseOptions(
-        // Замени на свой порт из launchSettings.json бэкенда
-        baseUrl: 'https://localhost:7070', 
+        baseUrl: _baseUrl,
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 10),
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      ));
+      if (!kIsWeb) {
+  (_dio!.httpClientAdapter as IOHttpClientAdapter).onHttpClientCreate = (client) {
+    client.badCertificateCallback = (cert, host, port) => true;
+  };
+}
+
+      _dio!.interceptors.add(InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await OAuthService.getAccessToken();
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          return handler.next(options);
+        },
+        onError: (error, handler) async {
+          if (error.response?.statusCode == 401) {
+            await OAuthService.logout();
+          }
+          return handler.next(error);
+        },
       ));
 
-      // Настраиваем постоянное хранилище для кук
-      final appDocDir = await getApplicationDocumentsDirectory();
-      final cookieJar = PersistCookieJar(
-        storage: FileStorage("${appDocDir.path}/.cookies/"),
-      );
-      
-      _dio!.interceptors.add(CookieManager(cookieJar));
+      if (kDebugMode) {
+        _dio!.interceptors.add(LogInterceptor(
+          requestBody: true,
+          responseBody: true,
+          requestHeader: true,
+        ));
+      }
     }
     return _dio!;
   }
